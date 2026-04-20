@@ -1,5 +1,8 @@
-streamlit
 ultralytics
-opencv-python-headless
+streamlit
 pillow
-numpy<2.0.0
+numpy
+pandas
+folium
+streamlit-folium
+opencv-python-headless
