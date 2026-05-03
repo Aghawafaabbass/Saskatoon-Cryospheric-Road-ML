@@ -103,47 +103,47 @@ Uploaded Image
 ### Application Interface
 
 #### 🏠 Screenshot 1 — Main Dashboard & Control Center
-![Main Dashboard](screenshots/Sc%201.PNG)
+![Main Dashboard](screenshots/Screenshot1.PNG)
 
 ---
 
 #### 🔍 Screenshot 2 — AI Perception View (Detection Output)
-![Detection Interface](screenshots/Sc%202.PNG)
+![Detection Interface](screenshots/Screenshot2.PNG)
 
 ---
 
 #### 🛡️ Screenshot 3 — Safety Dashboard & Driving Advice
-![Safety Dashboard](screenshots/Sc%203.PNG)
+![Safety Dashboard](screenshots/Screenshot3.PNG)
 
 ---
 
 #### 🗺️ Screenshot 4 — Geospatial Incident Map
-![Geospatial Map](screenshots/Sc%204.PNG)
+![Geospatial Map](screenshots/Screenshot4.PNG)
 
 ---
 
 #### ⚙️ Screenshot 5 — AI Sensitivity Control & Settings
-![AI Settings](screenshots/Sc%205.PNG)
+![AI Settings](screenshots/Screenshot5.PNG)
 
 ---
 
 #### 📊 Screenshot 6 — Hazard Detection Results
-![Hazard Results](screenshots/Sc%206.PNG)
+![Hazard Results](screenshots/Screenshot6.PNG)
 
 ---
 
 #### 📄 Screenshot 7 — Safety Report Download
-![Safety Report](screenshots/Sc%207.PNG)
+![Safety Report](screenshots/Screenshot7.PNG)
 
 ---
 
 #### 🌨️ Screenshot 8 — Snowy Conditions Detection
-![Snowy Conditions](screenshots/Sc%208.PNG)
+![Snowy Conditions](screenshots/Screenshot8.PNG)
 
 ---
 
 #### 🌫️ Screenshot 9 — Low Visibility (Fog/Salt) Detection
-![Low Visibility Detection](screenshots/Sc%209.PNG)
+![Low Visibility Detection](screenshots/Screenshot9.PNG)
 
 ---
 
