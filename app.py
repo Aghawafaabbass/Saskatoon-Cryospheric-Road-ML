@@ -2,37 +2,33 @@ import streamlit as st
 from ultralytics import YOLO
 from PIL import Image
 import numpy as np
-import pandas as pd
+import datetime
 import folium
 from streamlit_folium import st_folium
-import datetime
 
 # --- Page Config ---
 st.set_page_config(page_title="Saskatoon Winter AI", layout="wide", page_icon="❄️")
 
-# --- UI Styling (Visibility Fix) ---
+# --- Improved UI Styling ---
 st.markdown("""
     <style>
-    /* Metric boxes fix for Dark Mode */
     [data-testid="stMetric"] {
-        background-color: #262730;
-        border: 1px solid #464b5c;
+        background-color: #1e2129;
+        border: 1px solid #00d4ff;
         padding: 15px;
-        border-radius: 15px;
+        border-radius: 12px;
     }
-    [data-testid="stMetricLabel"] {
-        color: #00d4ff !important;
-        font-weight: bold;
-    }
-    [data-testid="stMetricValue"] {
-        color: #ffffff !important;
-    }
-    /* Main title styling */
     .main-title {
         color: #00d4ff;
         text-align: center;
-        font-size: 40px;
-        font-weight: bold;
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 0;
+    }
+    .status-card {
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 10px;
     }
     footer {visibility: hidden;}
     .footer-text {
@@ -41,106 +37,130 @@ st.markdown("""
         bottom: 0;
         width: 100%;
         background-color: #0e1117;
-        color: white;
+        color: #808495;
         text-align: center;
-        padding: 8px;
-        font-size: 14px;
-        z-index: 100;
+        padding: 5px;
+        font-size: 12px;
+        border-top: 1px solid #262730;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- Sidebar: Features ---
-with st.sidebar:
-    st.title("📍 Saskatoon Hub")
-    st.metric("City", "Saskatoon, SK")
-    st.metric("Current Temp", "-14°C", "❄️ Snowy")
-    
-    st.write("---")
-    st.subheader("👨‍💻 Developer")
-    st.success("Agha Wafa Abbas")
-    
-    st.write("---")
-    st.info("System: YOLOv8 Engine\nOS: Debian Trixie")
-
-# --- Model Loading ---
+# --- Model Loading with Error Handling ---
 @st.cache_resource
 def load_model():
     try:
-        return YOLO("best.pt")
+        # Load YOLOv8 model trained on DAWN dataset
+        return YOLO("best.pt") 
     except Exception as e:
-        st.error("Model 'best.pt' missing from repository!")
         return None
 
 model = load_model()
 
-# --- Main Interface ---
-st.markdown('<p class="main-title">❄️ Saskatoon Cryospheric Road Safety System</p>', unsafe_allow_html=True)
+# --- Sidebar: Location & Environment ---
+with st.sidebar:
+    st.image("https://icons8.com", width=80)
+    st.title("Saskatoon Hub")
+    st.metric("Location", "Saskatoon, SK", "Canada")
+    st.metric("Environment", "-14°C", "❄️ Snowy/Icy")
+    
+    st.write("---")
+    conf_threshold = st.slider("AI Sensitivity (Confidence)", 0.1, 1.0, 0.25)
+    
+    st.write("---")
+    st.subheader("👨‍💻 Developer")
+    st.info("Agha Wafa Abbas")
+    st.caption("AI Safety System v2.0")
+
+# --- Header ---
+st.markdown('<p class="main-title">CRYOSPHERIC ROAD SAFETY</p>', unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #808495;'>Advanced Computer Vision for Winter Navigation</p>", unsafe_allow_html=True)
 st.write("---")
 
-# Layout for Uploader and Stats
+# --- Logic: Map DAWN Labels to Local Context ---
+def get_safety_advice(detected_list):
+    # DAWN Dataset typically has: Sand, Snow, Fog, Rain
+    hazards = []
+    advice = "Normal driving conditions."
+    is_danger = False
+    
+    for d in detected_list:
+        d = d.lower()
+        if d in ['snow', 'ice']:
+            hazards.append("❄️ Heavy Snow/Ice")
+            advice = "High risk of skidding. Use winter tires. Speed: Max 40km/h."
+            is_danger = True
+        elif d == 'sand': # In Saskatoon context, this is often low visibility/road salt
+            hazards.append("🌫️ Low Visibility (Fog/Grit)")
+            advice = "Reduced visibility. Turn on fog lights. Keep distance."
+            is_danger = True
+        elif d == 'fog':
+            hazards.append("☁️ Dense Fog")
+            advice = "Use low-beam headlights. Watch for pedestrians."
+            is_danger = True
+            
+    return hazards, advice, is_danger
+
+# --- Main App Logic ---
 col_up, col_stat = st.columns([2, 1])
 
 with col_up:
-    uploaded_file = st.file_uploader("📷 Upload Road Image...", type=['jpg', 'jpeg', 'png'])
+    uploaded_file = st.file_uploader("📤 Drop road image here...", type=['jpg', 'jpeg', 'png'])
 
-if uploaded_file is not None and model is not None:
-    # 1. Processing
+if uploaded_file:
     image = Image.open(uploaded_file)
-    img_array = np.array(image)
     
-    with st.spinner('AI analyzing road conditions...'):
-        results = model.predict(source=img_array, conf=0.25)
-        res_plotted = results[0].plot()
-        
-    # 2. Results Layout
-    res_col1, res_col2 = st.columns([1.5, 1])
-
-    with res_col1:
-        st.subheader("🔍 AI Vision")
-        st.image(res_plotted, caption="Detection Result", use_container_width=True)
-
-    with res_col2:
-        st.subheader("🛡️ Safety Dashboard")
-        names = model.names
-        detected = [names[int(box.cls)] for box in results[0].boxes]
-        
-        if detected:
-            condition = ", ".join(set(detected))
-            st.write(f"**Detected Conditions:** {condition}")
+    if model:
+        with st.spinner('Analyzing Frame...'):
+            results = model.predict(source=image, conf=conf_threshold)
+            res_plotted = results[0].plot()
             
-            hazard_keywords = ['snow', 'ice', 'slush', 'black ice']
-            is_hazardous = any(x.lower() in hazard_keywords for x in detected)
+            # Extract names
+            detected_classes = [model.names[int(box.cls)] for box in results[0].boxes]
+            hazards, advice, is_danger = get_safety_advice(set(detected_classes))
+
+        # --- Display Results ---
+        c1, c2 = st.columns([1.5, 1])
+        
+        with c1:
+            st.subheader("🔍 AI Vision Analysis")
+            st.image(res_plotted, use_container_width=True)
             
-            if is_hazardous:
-                st.error("🚨 **DANGER: Hazardous Road!**")
-                st.warning("Advice: Speed limit 30-40 km/h. High risk of skidding.")
+        with c2:
+            st.subheader("🛡️ Safety Dashboard")
+            if hazards:
+                st.write(f"**Conditions:** {', '.join(hazards)}")
+                
+                if is_danger:
+                    st.error("🚨 DANGER: HAZARDOUS ROAD")
+                    st.warning(f"**Action:** {advice}")
+                else:
+                    st.success("✅ ROAD CLEAR")
             else:
-                st.success("✅ **SAFE: Road Clear**")
-                st.write("Normal driving conditions.")
-            
-            # --- New Feature: Download Report ---
-            report_data = f"Saskatoon Road Safety Report\nDate: {datetime.datetime.now()}\nCondition: {condition}\nHazard: {is_hazardous}"
-            st.download_button("📥 Download Analysis Report", report_data, file_name="Road_Report.txt")
-            
-        else:
-            st.info("No hazards detected.")
-            is_hazardous = False
+                st.success("✅ NO HAZARDS DETECTED")
+                st.write("Clear visibility and road surface.")
 
-    # --- 3. Interactive Map ---
-    st.write("---")
-    st.subheader("📍 Incident Map (Saskatoon Area)")
-    m = folium.Map(location=[52.1332, -106.6700], zoom_start=12)
-    folium.Marker(
-        [52.1332, -106.6700], 
-        popup="Analysis Location", 
-        icon=folium.Icon(color='red' if is_hazardous else 'green', icon='info-sign')
-    ).add_to(m)
-    st_folium(m, width="100%", height=350)
+            # Report Generation
+            report = f"SASKATOON ROAD REPORT\n{'='*25}\nTime: {datetime.datetime.now()}\nConditions: {', '.join(hazards) if hazards else 'Clear'}\nStatus: {'DANGER' if is_danger else 'SAFE'}"
+            st.download_button("📊 Download Report", report, "Saskatoon_Road_Report.txt")
 
-# --- Professional Footer ---
+        # --- Map ---
+        st.write("---")
+        st.subheader("📍 Deployment Location")
+        m = folium.Map(location=[52.1332, -106.6700], zoom_start=13, tiles="cartodbpositron")
+        folium.Marker(
+            [52.1332, -106.6700], 
+            popup="Current Analysis", 
+            icon=folium.Icon(color='red' if is_danger else 'green')
+        ).add_to(m)
+        st_folium(m, width="100%", height=300)
+
+else:
+    st.info("Waiting for image upload to start analysis...")
+
+# --- Footer ---
 st.markdown(f"""
     <div class="footer-text">
-        System Active | Developed by <b>Agha Wafa Abbas</b> | {datetime.datetime.now().year}
+        System Active • Saskatoon Winter AI • Developed by Agha Wafa Abbas • {datetime.datetime.now().year}
     </div>
     """, unsafe_allow_html=True)
