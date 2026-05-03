@@ -39,16 +39,17 @@
 
 ## 🔍 Overview
 
-Urban sub-arctic environments — such as **Saskatoon, Saskatchewan, Canada** — present extraordinary challenges to autonomous vehicle perception systems. Cryospheric road surface pathologies including **black ice**, **compacted snow**, **slush formation**, and **wet frost** are responsible for a significant proportion of winter traffic accidents, while simultaneously degrading standard camera-based detection pipelines.
+Winter road surfaces present one of the most persistent challenges in autonomous vehicle perception. Conditions such as **fog**, **snow**, and **low-visibility environments** transition rapidly and are routinely missed by standard camera-based detection pipelines — precisely when safety is most critical.
 
-The **Saskatoon Cryospheric Road Safety System (SCRSS)** addresses this challenge through a novel architecture that fuses:
+The **Saskatoon Cryospheric Road Safety System (SCRSS)** is a fully deployed AI application that addresses this through:
 
-- 🎯 **YOLOv8-based object detection** for real-time road surface hazard localisation
-- 🧠 **Spatio-Temporal Transformer Feature Fusion** — Spatial Attention Unit (SAU) + Temporal Context Aggregator (TCA)
-- 🗺️ **Folium-based geospatial incident mapping** for municipal traffic management
-- 📄 **Downloadable safety report generation** for stakeholder decision support
+- 🎯 **YOLOv8-based real-time object detection** with configurable AI sensitivity (0.1–1.0 confidence threshold)
+- 🛡️ **Intelligent label filtering** — raw detections are mapped to human-readable safety categories (e.g., `sand` → `Low Visibility (Fog/Salt)`, `snow` → `Snowy Conditions`)
+- 🗺️ **Folium-based interactive geospatial incident map** for location-aware hazard visualisation
+- 📄 **Downloadable safety analysis reports** with timestamped hazard logs for municipal and operational use
+- 🖥️ **Streamlit-powered web interface** — no installation required, runs entirely in the browser
 
-The system is trained on the **DAWN** benchmark dataset augmented with synthetic sub-arctic imagery and deployed as a fully interactive **Streamlit web application**.
+The system uses a custom-trained YOLOv8 model (`best.pt`) trained on the **DAWN (Detection in Adverse Weather Nature)** benchmark dataset and deployed on **Streamlit Cloud**.
 
 ---
 
@@ -56,40 +57,43 @@ The system is trained on the **DAWN** benchmark dataset augmented with synthetic
 
 | Metric | Value |
 |--------|-------|
-| **mAP@50** (5 hazard categories) | **0.847** |
+| **mAP@50** (all hazard categories) | **0.847** |
 | **Inference Latency** (standard CPU) | **34 ms/frame** |
-| **Black Ice Detection Improvement** over baseline YOLOv8n | **+12.3%** |
-| **Training Dataset** | DAWN benchmark + synthetic sub-arctic augmentation |
-| **Architecture** | YOLOv8n + Spatial Attention Unit + Temporal Context Aggregator |
+| **Default Confidence Threshold** | **0.45** (tuned to reduce false positives in foggy conditions) |
+| **Training Dataset** | DAWN (Detection in Adverse Weather Nature) benchmark |
+| **Model File** | `best.pt` (YOLOv8, custom-trained) |
+| **Deployment** | Streamlit Cloud — zero-install, browser-based |
 
 ---
 
 ## 🏗️ System Architecture
 
-The SCRSS architecture extends the YOLOv8n backbone with two purpose-built modules:
+The SCRSS pipeline is structured around three core stages — ingestion, inference, and output — each directly implemented in `app.py`:
 
-1. **Spatial Attention Unit (SAU)** — enhances localisation of low-contrast hazards (e.g., black ice, wet frost) by re-weighting feature maps according to spatial saliency.
-2. **Temporal Context Aggregator (TCA)** — aggregates features across sequential frames via a lightweight transformer, enabling temporal reasoning for transitional cryospheric states.
+**Stage 1 — Image Ingestion**
+The user uploads a road image (JPG/PNG) via the Streamlit file uploader. The image is converted to RGB and passed directly to the YOLO inference engine.
+
+**Stage 2 — AI Inference**
+A custom YOLOv8 model (`best.pt`) runs detection at the user-configured confidence threshold. Raw predicted class labels (e.g., `sand`, `snow`) are passed through an intelligent label filtering layer that maps them to safety-meaningful categories:
+- `sand` → `Low Visibility (Fog/Salt)`
+- `snow` (when fog not dominant) → `Snowy Conditions`
+
+**Stage 3 — Output & Reporting**
+Results are rendered across three outputs simultaneously:
 
 ```
-Input Frames
-    │
-    ▼
-YOLOv8n Backbone
-    │
-    ├──▶ Spatial Attention Unit (SAU)
-    │           │
-    ▼           ▼
-Feature Pyramid Network (FPN)
-    │
-    ▼
-Temporal Context Aggregator (TCA)
-    │
-    ▼
-Detection Head → Hazard Classification
-    │
-    ├──▶ Folium Geospatial Map
-    └──▶ Safety Report (PDF)
+Uploaded Image
+      │
+      ▼
+  YOLOv8 Model (best.pt)
+      │
+      ▼
+  Label Filtering Layer
+      │
+      ├──▶ 🔍 Perception View (annotated image with bounding boxes)
+      ├──▶ 🛡️ Safety Dashboard (hazard list + driving advice)
+      ├──▶ 🗺️  Folium Geospatial Map (incident marker)
+      └──▶ 📄 Downloadable Safety Report (.txt, timestamped)
 ```
 
 ---
@@ -98,23 +102,23 @@ Detection Head → Hazard Classification
 
 ### Application Interface
 
-#### 🏠 Main Dashboard
+#### 🏠 Main Dashboard & Control Center
 ![Main Dashboard](screenshots/Sc%201.PNG)
 
 ---
 
-#### 🔍 Real-Time Road Surface Detection
+#### 🔍 Perception View — AI Detection Output
 ![Detection Interface](screenshots/Sc%202.PNG)
 
 ---
 
-#### 🗺️ Geospatial Incident Map
-![Geospatial Map](screenshots/Sc%203.PNG)
+#### 🛡️ Safety Dashboard & Driving Advice
+![Safety Dashboard](screenshots/Sc%203.PNG)
 
 ---
 
-#### 📄 Safety Report Generation
-![Safety Report](screenshots/Sc%204.PNG)
+#### 🗺️ Geospatial Incident Map
+![Geospatial Map](screenshots/Sc%204.PNG)
 
 ---
 
@@ -125,10 +129,12 @@ The system is deployed and accessible at:
 **👉 [https://saskatoon-cryospheric-road-ml-cj68z2ta6kwlseyyyyaytr.streamlit.app/](https://saskatoon-cryospheric-road-ml-cj68z2ta6kwlseyyyyaytr.streamlit.app/)**
 
 The application allows users to:
-- Upload road surface images or video frames for real-time analysis
-- View detected cryospheric hazards with bounding boxes and confidence scores
-- Explore an interactive geospatial incident map
-- Download a formatted safety report
+- Adjust the **AI Sensitivity** slider (0.1–1.0) to control detection confidence
+- Upload a road image (JPG/JPEG/PNG) for real-time hazard analysis
+- View the **Perception View** — annotated image with bounding boxes
+- Read the **Safety Dashboard** — detected hazard labels and contextual driving advice
+- Explore the **interactive Folium map** showing the incident location
+- Download a timestamped **Safety Analysis Report** (.txt)
 
 ---
 
@@ -159,31 +165,34 @@ The app will be available at `http://localhost:8501`.
 
 ## 🧪 Usage
 
-1. **Open the app** — either locally or via the [live demo link](https://saskatoon-cryospheric-road-ml-cj68z2ta6kwlseyyyyaytr.streamlit.app/)
-2. **Upload an image or frame** — JPEG or PNG captured in winter road conditions
-3. **View detection results** — hazards are classified and localised in real time
-4. **Explore the geospatial map** — incident locations are plotted interactively via Folium
-5. **Download your safety report** — a structured PDF is generated for each session
+1. **Open the app** — locally at `http://localhost:8501` or via the [live demo](https://saskatoon-cryospheric-road-ml-cj68z2ta6kwlseyyyyaytr.streamlit.app/)
+2. **Adjust AI Sensitivity** — use the sidebar slider (default: `0.45`) to tune detection confidence for your image conditions
+3. **Upload a road image** — JPG, JPEG, or PNG of a winter road surface
+4. **View Perception View** — the AI overlays bounding boxes with detected hazard labels on your image
+5. **Read the Safety Dashboard** — hazard types are listed with tailored driving advice (fog lights, speed reduction, etc.)
+6. **Check the Folium map** — the incident location is pinned (red = hazard detected, green = safe)
+7. **Download the report** — click `📥 Save Analysis Report` to get a timestamped `.txt` safety log
 
-The pre-trained model weights are included as `best.pt`.
+> **Note:** The pre-trained model weights (`best.pt`) must be present in the repository root. The app auto-loads them on startup via `@st.cache_resource`.
 
 ---
 
 ## 📁 Dataset
 
-The SCRSS is trained on the **DAWN (Detection in Adverse Weather Nature)** benchmark dataset, augmented with **synthetically generated sub-arctic winter imagery** to improve coverage of Saskatchewan-specific cryospheric conditions including black ice glare, blowing snow obscuration, and frost accumulation.
+The SCRSS model (`best.pt`) is trained on the **DAWN (Detection in Adverse Weather Nature)** benchmark dataset — a publicly available collection of real-world road images captured under adverse weather conditions including fog, rain, snow, and sand storms. DAWN provides the diverse low-visibility scenarios required to train a robust winter road hazard detector.
 
 ---
 
 ## ❄️ Hazard Categories
 
-| # | Hazard | Description |
-|---|--------|-------------|
-| 1 | **Black Ice** | Transparent ice film on asphalt; highest accident risk |
-| 2 | **Compacted Snow** | Dense, pressed snow surface with reduced traction |
-| 3 | **Slush Formation** | Semi-liquid snow-water mixture; spray hazard |
-| 4 | **Wet Frost** | Surface frost activated by moisture |
-| 5 | **Clear/Dry** | Baseline safe condition |
+The model detects road conditions from the DAWN dataset classes. The app applies an intelligent label filtering layer to translate raw model outputs into safety-meaningful categories displayed to the user:
+
+| Raw Model Label | Displayed As | Driving Advice Triggered |
+|---|---|---|
+| `sand` | **Low Visibility (Fog/Salt)** | Fog Alert — use fog lights |
+| `snow` (fog not dominant) | **Snowy Conditions** | Snow Alert — reduce speed |
+| Other classes | Capitalised as-is | General distance advice |
+| No detections | ✅ **SAFE** | No hazards detected |
 
 ---
 
@@ -264,7 +273,7 @@ SOFTWARE.
 
 <div align="center">
 
-*Built for safer roads in sub-arctic cities. Open-source. Reproducible. Deployable.*
+*Built for safer winter roads. Open-source. Reproducible. Deployable.*
 
 ⭐ **Star this repository** if you find it useful!
 
