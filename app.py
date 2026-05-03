@@ -6,157 +6,148 @@ import datetime
 import folium
 from streamlit_folium import st_folium
 
-# --- 1. Advanced UI Configuration ---
+# --- 1. Pro UI Configuration ---
 st.set_page_config(page_title="Saskatoon Winter AI", layout="wide", page_icon="❄️")
 
 st.markdown("""
     <style>
-    /* Professional Dark Theme */
     .stApp { background-color: #0e1117; }
-    
-    /* Clean Header Section */
     .header-container {
-        background: linear-gradient(90deg, #1e3a8a, #1e40af);
-        padding: 20px;
+        background: linear-gradient(90deg, #1e3a8a, #111827);
+        padding: 25px;
         border-radius: 15px;
         text-align: center;
-        margin-bottom: 25px;
-        border: 1px solid #3b82f6;
+        border: 1px solid #1e40af;
+        margin-bottom: 20px;
     }
-    .main-title { color: white; font-size: 32px; font-weight: 800; margin: 0; }
-    
-    /* Dashboard Cards */
+    .main-title { color: #60a5fa; font-size: 35px; font-weight: 800; margin: 0; letter-spacing: 1px; }
     [data-testid="stMetric"] {
         background-color: #161e2e;
         border: 1px solid #1f2937;
         padding: 15px;
         border-radius: 12px;
     }
-    
-    /* Floating Footer */
-    .footer {
-        position: fixed;
-        bottom: 0; left: 0; width: 100%;
-        background: #111827; color: #9ca3af;
-        text-align: center; padding: 10px; font-size: 12px;
-        border-top: 1px solid #1f2937; z-index: 1000;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. Model Loading (Secure) ---
+# --- 2. Model Loader ---
 @st.cache_resource
-def get_model():
+def load_yolo_model():
     try:
         return YOLO("best.pt")
     except Exception as e:
-        st.error(f"Error: Could not find 'best.pt'. Ensure weights are in the root folder.")
+        st.error("⚠️ Error: 'best.pt' missing!")
         return None
 
-model = get_model()
+model = load_yolo_model()
 
-# --- 3. Sidebar (Control Center) ---
+# --- 3. Sidebar with Dynamic Status ---
 with st.sidebar:
-    st.image("https://icons8.com", width=80)
-    st.title("📍 Control Center")
-    st.metric("City", "Saskatoon, SK", "-14°C ❄️")
+    st.markdown("<h1 style='text-align: center;'>❄️</h1>", unsafe_allow_html=True)
+    st.title("Control Center")
+    st.metric("City", "Saskatoon, SK")
+    st.metric("Temperature", "-14°C", "Snowy Condition")
     
     st.write("---")
-    st.subheader("⚙️ Settings")
-    conf_val = st.slider("AI Sensitivity", 0.1, 1.0, 0.35)
+    st.subheader("⚙️ Analysis Mode")
+    auto_mode = st.toggle("Auto-Sensitivity Logic", value=True, help="AI adjusts threshold based on weather")
+    
+    # User can still manually override if auto_mode is off
+    conf_val = st.slider("Manual Sensitivity", 0.1, 1.0, 0.40, disabled=auto_mode)
     
     st.write("---")
     st.success(f"Developer: Agha Wafa Abbas")
-    st.info("System: YOLOv8 Perception Engine")
+    st.caption("v2.2.0 | Auto-Tuning Engine Active")
 
-# --- 4. Main Interface Header ---
+# --- 4. Main Interface ---
 st.markdown("""
     <div class="header-container">
-        <p class="main-title">❄️ SASKATOON CRYOSPHERIC ROAD PERCEPTION</p>
-        <p style="color: #bfdbfe; margin-top: 5px;">AI-Driven Safety Monitoring for Winter Conditions</p>
+        <p class="main-title">SASKATOON ROAD SAFETY AI</p>
+        <p style="color: #94a3b8;">Cryospheric Road Perception & Hazard Detection</p>
     </div>
     """, unsafe_allow_html=True)
 
-# --- 5. Image Upload & Processing ---
-uploaded_file = st.file_uploader("📸 Upload Road Image or CCTV Snapshot", type=['jpg', 'jpeg', 'png'])
+uploaded_file = st.file_uploader("📤 Upload Image (Fog/Snow/Sand from DAWN set)", type=['jpg', 'jpeg', 'png'])
 
-if uploaded_file is not None:
-    # Read Image
-    raw_img = Image.open(uploaded_file).convert("RGB")
+if uploaded_file and model:
+    img = Image.open(uploaded_file).convert("RGB")
     
-    # Layout for analysis
-    col_vis, col_data = st.columns([1.6, 1])
-    
-    with st.spinner("🧠 AI Engine Running..."):
-        # Run Detection
-        results = model.predict(source=raw_img, conf=conf_val)
+    # 5. Smart AI Inference with Auto-Threshold
+    with st.spinner("AI Analysis in progress..."):
+        # Step 1: Pre-scan with low confidence to check environment
+        pre_results = model.predict(source=img, conf=0.20, verbose=False)
+        pre_labels = [model.names[int(box.cls)].lower() for box in pre_results[0].boxes]
         
-        # Get result image (using the first result in list)
-        res_img_array = results[0].plot() 
-        
-        # Logic for Hazards (DAWN Dataset Mapping)
-        detected_names = [model.names[int(box.cls)] for box in results[0].boxes]
-        
-        # Cleaning and Mapping labels
-        unique_labels = list(set(detected_names))
-        hazard_found = any(x.lower() in ['snow', 'ice', 'sand', 'fog'] for x in unique_labels)
-
-    # --- Display Column 1: Vision ---
-    with col_vis:
-        st.subheader("🔍 Real-time Detection")
-        st.image(res_img_array, use_container_width=True, caption="Inference Result")
-
-    # --- Display Column 2: Safety Analytics ---
-    with col_data:
-        st.subheader("🛡️ Safety Dashboard")
-        
-        if unique_labels:
-            # Show Labels as Tags
-            st.write("**Detected Conditions:**")
-            cols = st.columns(len(unique_labels))
-            for i, label in enumerate(unique_labels):
-                st.info(f"📍 {label.capitalize()}")
-
-            # Alert Logic
-            if hazard_found:
-                st.error("⚠️ STATUS: HAZARDOUS CONDITIONS")
-                st.warning("""
-                **Driving Advice:**
-                - Speed Limit: 30 km/h
-                - Low Visibility: Use Fog Lights
-                - Caution: High risk of skidding
-                """)
+        # Step 2: Auto-adjust logic
+        if auto_mode:
+            if 'sand' in pre_labels or 'fog' in pre_labels:
+                final_conf = 0.25  # Lower threshold for low visibility
+                st.sidebar.info("💡 Auto-Mode: Lowering threshold for Fog/Sand")
+            elif 'snow' in pre_labels:
+                final_conf = 0.40  # Standard for snow
             else:
-                st.success("✅ STATUS: ROAD SAFE")
-                st.write("Maintain normal speeds. Road surface appears clear.")
+                final_conf = 0.50  # Strict for clear conditions
         else:
-            st.success("✅ NO IMMEDIATE HAZARDS")
-            st.write("Detection engine found no critical weather risks.")
+            final_conf = conf_val
 
-        # Download Feature
+        # Step 3: Final Inference
+        results = model.predict(source=img, conf=final_conf, verbose=False)
+        res_plotted = results[0].plot()
+        
+        raw_labels = [model.names[int(box.cls)] for box in results[0].boxes]
+        
+        # Map labels to Saskatoon Context
+        mapped_labels = []
+        for L in set(raw_labels):
+            if L.lower() == 'sand':
+                mapped_labels.append("Low Visibility (Fog/Salt)")
+            else:
+                mapped_labels.append(L.capitalize())
+
+    # 6. Dashboard Layout
+    col_img, col_dash = st.columns([1.7, 1])
+
+    with col_img:
+        st.subheader("🔍 AI Vision Analysis")
+        st.image(res_plotted, use_container_width=True)
+
+    with col_dash:
+        st.subheader("🛡️ Safety Dashboard")
+        st.write(f"**Confidence Level:** `{final_conf:.2f}`")
+        
+        if mapped_labels:
+            st.write("**Detected Conditions:**")
+            for label in mapped_labels:
+                st.info(f"📍 {label}")
+            
+            is_hazardous = any(x.lower() in ['snow', 'ice', 'sand', 'fog', 'low visibility (fog/salt)'] for x in [m.lower() for m in mapped_labels])
+            
+            if is_hazardous:
+                st.error("🚨 STATUS: HAZARDOUS")
+                with st.expander("📢 Driving Advice", expanded=True):
+                    st.write("- **Speed:** Max 30-40 km/h")
+                    st.write("- **Visibility:** Use Fog Lights")
+                    st.write("- **Road:** High risk of black ice")
+            else:
+                st.success("✅ STATUS: SAFE")
+        else:
+            st.success("✅ NO HAZARDS DETECTED")
+
+        # Download Report
         st.write("---")
-        report_txt = f"Saskatoon Safety Report\nDate: {datetime.datetime.now()}\nConditions: {', '.join(unique_labels)}"
-        st.download_button("📥 Download Analysis", report_txt, "Saskatoon_Report.txt")
+        report = f"Saskatoon AI Report\nTime: {datetime.datetime.now()}\nThreshold Used: {final_conf}\nHazards: {', '.join(mapped_labels)}"
+        st.download_button("📥 Save Analysis", report, "Saskatoon_Report.txt")
 
-    # --- 6. Map Section ---
+    # 7. Map Section
     st.write("---")
-    st.subheader("🗺️ Incident Geolocation")
+    st.subheader("📍 Geolocation Context")
     m = folium.Map(location=[52.1332, -106.6700], zoom_start=12, tiles='CartoDB dark_matter')
-    folium.Marker(
-        [52.1332, -106.6700], 
-        popup="Live Analysis Point", 
-        icon=folium.Icon(color='red' if hazard_found else 'green', icon='car', prefix='fa')
-    ).add_to(m)
+    folium.Marker([52.1332, -106.6700], icon=folium.Icon(color='red' if mapped_labels else 'green')).add_to(m)
     st_folium(m, width="100%", height=300)
 
+elif not model:
+    st.error("Model file not found. Please upload 'best.pt' to the repository.")
 else:
-    # Placeholder when no image is uploaded
-    st.info("👋 Welcome! Please upload a road image from Saskatoon to begin the AI analysis.")
-    st.image("https://unsplash.com", caption="Saskatoon Winter Preview", use_container_width=True)
+    st.info("Waiting for image upload to begin analysis.")
 
-# --- 7. Footer ---
-st.markdown(f"""
-    <div class="footer">
-        System Node: Active | Version 2.1.0 | Developed by <b>Agha Wafa Abbas</b> | {datetime.datetime.now().year}
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: #4b5563; font-size: 12px;'>Developed by Agha Wafa Abbas | {datetime.datetime.now().year}</p>", unsafe_allow_html=True)
