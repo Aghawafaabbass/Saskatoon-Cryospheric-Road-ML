@@ -102,23 +102,48 @@ Uploaded Image
 
 ### Application Interface
 
-#### 🏠 Main Dashboard & Control Center
+#### 🏠 Screenshot 1 — Main Dashboard & Control Center
 ![Main Dashboard](screenshots/Sc%201.PNG)
 
 ---
 
-#### 🔍 Perception View — AI Detection Output
+#### 🔍 Screenshot 2 — AI Perception View (Detection Output)
 ![Detection Interface](screenshots/Sc%202.PNG)
 
 ---
 
-#### 🛡️ Safety Dashboard & Driving Advice
+#### 🛡️ Screenshot 3 — Safety Dashboard & Driving Advice
 ![Safety Dashboard](screenshots/Sc%203.PNG)
 
 ---
 
-#### 🗺️ Geospatial Incident Map
+#### 🗺️ Screenshot 4 — Geospatial Incident Map
 ![Geospatial Map](screenshots/Sc%204.PNG)
+
+---
+
+#### ⚙️ Screenshot 5 — AI Sensitivity Control & Settings
+![AI Settings](screenshots/Sc%205.PNG)
+
+---
+
+#### 📊 Screenshot 6 — Hazard Detection Results
+![Hazard Results](screenshots/Sc%206.PNG)
+
+---
+
+#### 📄 Screenshot 7 — Safety Report Download
+![Safety Report](screenshots/Sc%207.PNG)
+
+---
+
+#### 🌨️ Screenshot 8 — Snowy Conditions Detection
+![Snowy Conditions](screenshots/Sc%208.PNG)
+
+---
+
+#### 🌫️ Screenshot 9 — Low Visibility (Fog/Salt) Detection
+![Low Visibility Detection](screenshots/Sc%209.PNG)
 
 ---
 
