@@ -1,180 +1,259 @@
-# ❄️ Saskatoon Cryospheric Road ML System (SCRSS)
+<div align="center">
 
-### *Real-Time Autonomous Classification of Cryospheric Road Surface Pathologies in Sub-Arctic Urban Environments*
+# 🌨️ Saskatoon Cryospheric Road Safety System (SCRSS)
 
----
+### Spatio-Temporal Feature Fusion via Transformer-Based Architectures for Autonomous Classification of Cryospheric Road Surface Pathologies in Sub-Arctic Urban Environments
 
-## 🔗 Quick Links
+[![DOI Paper](https://zenodo.org/badge/DOI/10.5281/zenodo.20000920.svg)](https://doi.org/10.5281/zenodo.20000920)
+[![DOI Software](https://zenodo.org/badge/DOI/10.5281/zenodo.20001208.svg)](https://doi.org/10.5281/zenodo.20001208)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Streamlit-FF4B4B?style=flat&logo=streamlit)](https://saskatoon-cryospheric-road-ml-cj68z2ta6kwlseyyyyaytr.streamlit.app/)
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
+[![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-green)](https://ultralytics.com)
 
-| | | | |
-|:-:|:-:|:-:|:-:|
-| [🌐 Live App](https://saskatoon-cryospheric-road-ml-cj68z2ta6kwlseyyyyaytr.streamlit.app/) | [📄 Zenodo Code](https://zenodo.org/records/20001208) | [📊 Zenodo Data](https://zenodo.org/records/20000920) | [🤗 Colab](https://colab.research.google.com/drive/1oUTWV6toX-F5KXNCYWfxUsDw8fsgpJBm) |
+**Author:** Agha Wafa Abbas  
+📧 [agha.wafa@port.ac.uk](mailto:agha.wafa@port.ac.uk) | [awabbas@arden.ac.uk](mailto:awabbas@arden.ac.uk) | [wafa.abbas.lhr@rootsivy.edu.pk](mailto:wafa.abbas.lhr@rootsivy.edu.pk)
 
----
-
-## 📖 Abstract
-
-Urban sub-arctic environments (Saskatoon, Canada) present extreme challenges for autonomous vehicle perception. **Black ice, compacted snow, slush, and wet frost** cause deficient camera-based detection and contribute significantly to winter accidents.
-
-**SCRSS** achieves **mAP@50 of 0.847** with **34 ms** inference latency on CPU, a **12.3% improvement** in black ice detection over baseline YOLOv8n.
-
----
-
-## 🧊 Hazard Classes
-
-| Class | Abbr | Friction (μ) | Severity |
-|-------|------|--------------|----------|
-| Black Ice | BI | 0.10 – 0.18 | 🔴 CRITICAL |
-| Compacted Snow | CS | 0.18 – 0.35 | 🟠 HIGH |
-| Slush | SL | 0.25 – 0.50 | 🟠 HIGH |
-| Wet Frost | WF | 0.15 – 0.25 | 🟡 MEDIUM |
-| Clear Asphalt | CA | 0.65 – 0.85 | 🟢 SAFE |
+*Lecturer, School of Computing, University of Portsmouth, Southsea, Portsmouth PO1 2UP, United Kingdom*  
+*Lecturer, School of Computing, Arden University, Coventry, United Kingdom*  
+*Lecturer, School of Computing, Pearson, London, United Kingdom*  
+*Lecturer, School of Computing and Emerging Technologies, IVY College of Management Sciences, Lahore, Pakistan*
 
 ---
 
-## 🏗️ System Modules
+</div>
 
-| Module | Name | Function |
-|--------|------|----------|
-| 1 | IAPM | Image preprocessing (640x640, normalization) |
-| 2 | STFFDE | YOLOv8n + MHSA + TGU detection engine |
-| 3 | SAGRM | Hazard mapping + Folium + Safety reports |
+## 📋 Table of Contents
 
----
-
-## 🖼️ Screenshots
-
-| Home | Detection |
-|:----:|:---------:|
-| ![Home](screenshots/home.png) | ![Detection](screenshots/detection.png) |
-
-| Black Ice | Snow | Slush | Frost |
-|:---------:|:----:|:-----:|:-----:|
-| ![BI](screenshots/black_ice_sample.jpg) | ![CS](screenshots/compacted_snow_sample.jpg) | ![SL](screenshots/slush_sample.jpg) | ![WF](screenshots/wet_frost_sample.jpg) |
-
-| Geospatial Map |
-|:--------------:|
-| ![Map](screenshots/folium_map.png) |
+- [Overview](#-overview)
+- [Key Results](#-key-results)
+- [System Architecture](#-system-architecture)
+- [Screenshots](#-screenshots)
+- [Live Demo](#-live-demo)
+- [Installation](#-installation)
+- [Usage](#-usage)
+- [Dataset](#-dataset)
+- [Hazard Categories](#-hazard-categories)
+- [Citation](#-citation)
+- [License](#-license)
 
 ---
 
-## 📊 Performance Comparison
+## 🔍 Overview
 
-| Model | Precision | Recall | F1 | mAP@50 | mAP@50:95 |
-|-------|-----------|--------|-----|--------|-----------|
-| YOLOv5n | 0.712 | 0.683 | 0.697 | 0.694 | 0.412 |
-| YOLOv8n | 0.741 | 0.718 | 0.729 | 0.735 | 0.448 |
-| YOLOv8s | 0.763 | 0.739 | 0.751 | 0.758 | 0.471 |
-| Faster R-CNN | 0.724 | 0.706 | 0.715 | 0.721 | 0.439 |
-| SSD-MobileNetV3 | 0.698 | 0.671 | 0.684 | 0.678 | 0.401 |
-| YOLOv8n + ViT | 0.779 | 0.754 | 0.766 | 0.772 | 0.483 |
-| **SCRSS-STFF** | **0.856** | **0.839** | **0.847** | **0.847** | **0.531** |
+Urban sub-arctic environments — such as **Saskatoon, Saskatchewan, Canada** — present extraordinary challenges to autonomous vehicle perception systems. Cryospheric road surface pathologies including **black ice**, **compacted snow**, **slush formation**, and **wet frost** are responsible for a significant proportion of winter traffic accidents, while simultaneously degrading standard camera-based detection pipelines.
 
----
+The **Saskatoon Cryospheric Road Safety System (SCRSS)** addresses this challenge through a novel architecture that fuses:
 
-## 📋 Per-Class Results (AP@50)
+- 🎯 **YOLOv8-based object detection** for real-time road surface hazard localisation
+- 🧠 **Spatio-Temporal Transformer Feature Fusion** for contextual reasoning across frames
+- 🗺️ **Folium-based geospatial incident mapping** for municipal traffic management
+- 📄 **Downloadable safety report generation** for stakeholder decision support
 
-| Class | Precision | Recall | AP@50 | Samples |
-|-------|-----------|--------|-------|---------|
-| Black Ice (BI) | 0.821 | 0.798 | 0.809 | 54 |
-| Compacted Snow (CS) | 0.883 | 0.861 | 0.872 | 67 |
-| Slush (SL) | 0.847 | 0.834 | 0.840 | 48 |
-| Wet Frost (WF) | 0.831 | 0.812 | 0.821 | 29 |
-| Clear Asphalt (CA) | 0.896 | 0.878 | 0.887 | 18 |
-| **Average** | **0.856** | **0.839** | **0.847** | **216** |
+The system is deployed as a fully interactive **Streamlit web application** and is open-source, providing a deployable baseline for cryospheric road intelligence in high-latitude metropolitan regions.
 
 ---
 
-## ⚡ Inference Latency (640x640)
+## 📊 Key Results
 
-| Hardware | Preprocessing | Inference | Total |
-|----------|:-------------:|:---------:|:-----:|
-| Intel i7-1165G7 (CPU) | 8.2 ms | 25.6 ms | 33.8 ms |
-| NVIDIA RTX 3080 (GPU) | 2.1 ms | 4.3 ms | 6.4 ms |
-| Streamlit Cloud (CPU) | 9.4 ms | 31.2 ms | 40.6 ms |
-| Google Colab T4 (GPU) | 2.8 ms | 5.9 ms | 8.7 ms |
-
----
-
-## 🔬 Ablation Study
-
-| Configuration | MHSA | TGU | Synthetic Aug | mAP@50 | ΔmAP |
-|---------------|:----:|:---:|:-------------:|:------:|:----:|
-| YOLOv8n Baseline | ✗ | ✗ | ✗ | 0.735 | — |
-| + Synthetic Aug | ✗ | ✗ | ✓ | 0.762 | +2.7 |
-| + MHSA Only | ✓ | ✗ | ✗ | 0.779 | +4.4 |
-| + TGU Only | ✗ | ✓ | ✗ | 0.751 | +1.6 |
-| + MHSA + TGU | ✓ | ✓ | ✗ | 0.811 | +7.6 |
-| **SCRSS-STFF (Full)** | ✓ | ✓ | ✓ | **0.847** | **+11.2** |
+| Metric | Value |
+|--------|-------|
+| **mAP@50** (5 hazard categories) | **0.847** |
+| **Inference Latency** (standard CPU) | **34 ms/frame** |
+| **Black Ice Detection Improvement** over baseline YOLOv8n | **+12.3%** |
+| **Training Dataset** | DAWN benchmark + synthetic sub-arctic augmentation |
+| **Architecture** | YOLOv8n + Spatial Attention Unit + Temporal Context Aggregator |
 
 ---
 
-## 🚀 Installation
+## 🏗️ System Architecture
+
+The SCRSS architecture extends the YOLOv8n backbone with two purpose-built modules:
+
+1. **Spatial Attention Unit (SAU)** — enhances localisation of low-contrast hazards (e.g., black ice, wet frost) by re-weighting feature maps according to spatial saliency.
+2. **Temporal Context Aggregator (TCA)** — aggregates features across sequential frames via a lightweight transformer mechanism, providing temporal reasoning for transitional cryospheric states (e.g., slush-to-ice transition).
+
+```
+Input Frames
+    │
+    ▼
+YOLOv8n Backbone
+    │
+    ├──▶ Spatial Attention Unit (SAU)
+    │           │
+    ▼           ▼
+Feature Pyramid Network (FPN)
+    │
+    ▼
+Temporal Context Aggregator (TCA)
+    │
+    ▼
+Detection Head → Hazard Classification
+    │
+    ├──▶ Folium Geospatial Map
+    └──▶ Safety Report (PDF)
+```
+
+---
+
+## 📸 Screenshots
+
+### Application Interface
+
+<!-- Replace the image paths below with the actual screenshot filenames in your repo -->
+<!-- Upload screenshots to a `screenshots/` folder in this repository -->
+
+#### 🏠 Main Dashboard
+![Main Dashboard](screenshots/dashboard.png)
+
+#### 🔍 Real-Time Road Surface Detection
+![Detection Interface](screenshots/detection.png)
+
+#### 🗺️ Geospatial Incident Map
+![Geospatial Map](screenshots/geospatial_map.png)
+
+#### 📊 Model Performance Metrics
+![Performance Metrics](screenshots/metrics.png)
+
+#### 📄 Safety Report Generation
+![Safety Report](screenshots/safety_report.png)
+
+> **Note:** To add your screenshots, create a `screenshots/` folder in the repository root and upload your images. Then update the paths above to match your filenames.
+
+---
+
+## 🚀 Live Demo
+
+The system is deployed and accessible at:
+
+**👉 [https://saskatoon-cryospheric-road-ml-cj68z2ta6kwlseyyyyaytr.streamlit.app/](https://saskatoon-cryospheric-road-ml-cj68z2ta6kwlseyyyyaytr.streamlit.app/)**
+
+The application allows users to:
+- Upload road surface images or video frames for real-time analysis
+- View detected cryospheric hazards with bounding boxes and confidence scores
+- Explore an interactive geospatial incident map
+- Download a formatted safety report
+
+---
+
+## ⚙️ Installation
+
+### Prerequisites
+
+- Python 3.11
+- pip
+
+### Clone and Install
 
 ```bash
 git clone https://github.com/Aghawafaabbass/Saskatoon-Cryospheric-Road-ML.git
 cd Saskatoon-Cryospheric-Road-ML
 pip install -r requirements.txt
+```
+
+### Run Locally
+
+```bash
 streamlit run app.py
-Dependencies
-Package	Version
-opencv-python-headless	4.8.1
-ultralytics	8.0.200
-streamlit	1.28.0
-pillow	10.0.0
-numpy	1.24.3
-pandas	2.0.3
-folium	0.14.0
-streamlit-folium	0.11.0
-🧪 Training Settings
-Parameter	Value
-Base Model	YOLOv8n (COCO pretrained)
-Epochs	150
-Batch Size	16
-Image Size	640 × 640
-Optimizer	AdamW
-Initial LR	0.01
-Final LR	0.0001
-Weight Decay	0.0005
-GPU	NVIDIA A100 40GB
-Training Time	≈11.2 hours
-🌍 Geospatial Settings
-Parameter	Value
-Latitude	52.1332° N
-Longitude	106.6700° W
-Zoom	12
-Hazard Marker	🔴 Red
-Safe Marker	🟢 Green
-📝 Citation
-bibtex
-@article{abbas2024scrss,
-  title={Spatio-Temporal Feature Fusion via Transformer-Based Architectures for Autonomous Classification of Cryospheric Road Surface Pathologies in Sub-Arctic Urban Environments},
-  author={Abbas, Agha Wafa},
-  year={2024}
+```
+
+The app will be available at `http://localhost:8501`.
+
+---
+
+## 🧪 Usage
+
+1. **Open the app** — either locally or via the [live demo link](https://saskatoon-cryospheric-road-ml-cj68z2ta6kwlseyyyyaytr.streamlit.app/)
+2. **Upload an image or frame** — JPEG, PNG, or video frame captured in winter road conditions
+3. **View detection results** — the model classifies and localises road surface hazards in real time
+4. **Explore the geospatial map** — incident locations are plotted interactively via Folium
+5. **Download your safety report** — a structured PDF report is generated for each session
+
+The pre-trained model weights are included in the repository as `best.pt` (YOLOv8n backbone with SAU and TCA modules, trained on DAWN + synthetic data).
+
+---
+
+## 📁 Dataset
+
+The SCRSS is trained on the **DAWN (Detection in Adverse Weather Nature)** benchmark dataset, augmented with **synthetically generated sub-arctic winter imagery** to improve coverage of Saskatchewan-specific cryospheric conditions.
+
+> The DAWN dataset is publicly available. Synthetic augmentation was applied using standard image transformation pipelines to simulate black ice glare, blowing snow obscuration, and frost accumulation patterns characteristic of Saskatoon winters.
+
+---
+
+## ❄️ Hazard Categories
+
+The model classifies five cryospheric road surface pathology categories:
+
+| # | Hazard | Description |
+|---|--------|-------------|
+| 1 | **Black Ice** | Transparent ice film on asphalt; highest accident risk |
+| 2 | **Compacted Snow** | Dense, pressed snow surface with reduced traction |
+| 3 | **Slush Formation** | Semi-liquid snow-water mixture; spray hazard |
+| 4 | **Wet Frost** | Surface frost activated by moisture; low visibility cue |
+| 5 | **Clear/Dry** | Baseline safe condition class |
+
+---
+
+## 📖 Citation
+
+If you use this work, please cite both the preprint and the software:
+
+### Research Paper (Preprint)
+
+```bibtex
+@misc{abbas2026scrss,
+  author       = {Abbas, Agha Wafa},
+  title        = {Spatio-Temporal Feature Fusion via Transformer-Based Architectures 
+                  for Autonomous Classification of Cryospheric Road Surface Pathologies 
+                  in Sub-Arctic Urban Environments},
+  year         = {2026},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.20000920},
+  url          = {https://doi.org/10.5281/zenodo.20000920}
 }
-Archive	DOI
-Code	10.5281/zenodo.20001208
-Dataset	10.5281/zenodo.20000920
-👨‍🏫 Author
-Agha Wafa Abbas
+```
 
-Institution	Location
-University of Portsmouth	Portsmouth, UK
-Arden University	Coventry, UK
-Pearson	London, UK
-IVY College	Lahore, Pakistan
-Email: agha.wafa@port.ac.uk | awabbas@arden.ac.uk | wafa.abbas.lhr@rootsivy.edu.pk
+### Software
 
-📜 License
-MIT License
+```bibtex
+@software{abbas2026scrss_software,
+  author       = {Agha Wafa Abbas},
+  title        = {Aghawafaabbass/Saskatoon-Cryospheric-Road-ML v1.0},
+  year         = {2026},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.20001208},
+  url          = {https://doi.org/10.5281/zenodo.20001208}
+}
+```
 
-🙏 Acknowledgments
-Source	For
-Google Colab Pro	A100 GPU
-Ultralytics	YOLOv8
-Kenk & Hassaballah	DAWN dataset
-Streamlit	Cloud hosting
+---
+
+## 🏛️ Affiliations
+
+| Institution | Role |
+|---|---|
+| School of Computing, **University of Portsmouth**, UK | Lecturer |
+| School of Computing, **Arden University**, Coventry, UK | Lecturer |
+| School of Computing, **Pearson**, London, UK | Lecturer |
+| School of Computing and Emerging Technologies, **IVY College of Management Sciences**, Lahore, Pakistan | Lecturer |
+
+---
+
+## 📜 License
+
+This work is licensed under the **Creative Commons Attribution 4.0 International (CC BY 4.0)** license.
+
+[![CC BY 4.0](https://licensebuttons.net/l/by/4.0/88x31.png)](https://creativecommons.org/licenses/by/4.0/)
+
+You are free to share and adapt this work for any purpose, provided appropriate credit is given.
+
+---
+
 <div align="center">
-Made with ❄️ for sub-arctic road safety
 
-</div> ```
+*Built for safer roads in sub-arctic cities. Open-source. Reproducible. Deployable.*
+
+⭐ **Star this repository** if you find it useful!
+
+</div>
