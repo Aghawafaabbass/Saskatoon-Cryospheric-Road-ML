@@ -99,27 +99,22 @@ Detection Head → Hazard Classification
 ### Application Interface
 
 #### 🏠 Main Dashboard
-![Main Dashboard](screenshots/dashboard.png)
+![Main Dashboard](screenshots/Sc%201.PNG)
 
 ---
 
 #### 🔍 Real-Time Road Surface Detection
-![Detection Interface](screenshots/detection.png)
+![Detection Interface](screenshots/Sc%202.PNG)
 
 ---
 
 #### 🗺️ Geospatial Incident Map
-![Geospatial Map](screenshots/geospatial_map.png)
-
----
-
-#### 📊 Model Performance Metrics
-![Performance Metrics](screenshots/metrics.png)
+![Geospatial Map](screenshots/Sc%203.PNG)
 
 ---
 
 #### 📄 Safety Report Generation
-![Safety Report](screenshots/safety_report.png)
+![Safety Report](screenshots/Sc%204.PNG)
 
 ---
 
