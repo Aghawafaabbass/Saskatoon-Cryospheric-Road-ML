@@ -72,6 +72,9 @@ else:
             results = model.predict(source=img, conf=conf_val)
             res_plotted = results[0].plot() # Using first result index safely
             
+            # CRITICAL FIX: Convert YOLO's BGR output array to RGB image format for proper Streamlit display colors
+            display_img = Image.fromarray(res_plotted[..., ::-1])
+            
             # --- Label Filtering Logic ---
             raw_labels = [model.names[int(box.cls)].lower() for box in results[0].boxes]
             
@@ -92,7 +95,7 @@ else:
 
         with col_vis:
             st.subheader("🔍 Perception View")
-            st.image(res_plotted, use_container_width=True)
+            st.image(display_img, use_container_width=True)
 
         with col_dash:
             st.subheader("🛡️ Safety Dashboard")
