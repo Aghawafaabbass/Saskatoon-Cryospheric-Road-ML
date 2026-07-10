@@ -4,12 +4,13 @@ from PIL import Image
 import os
 import datetime
 import folium
+import pandas as pd
 from streamlit_folium import st_folium
 
-# --- 1. Page Config ---
+# --- 1. PAGE CONFIG ---
 st.set_page_config(page_title="Saskatoon Winter AI", layout="wide", page_icon="❄️")
 
-# --- 2. Professional CSS ---
+# --- 2. PROFESSIONAL CSS ---
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; }
@@ -19,14 +20,13 @@ st.markdown("""
         border: 1px solid #1e40af; margin-bottom: 25px;
     }
     .main-title { color: #60a5fa; font-size: 38px; font-weight: 800; margin: 0; }
-    [data-testid="stMetric"] { background-color: #161e2e; border: 1px solid #1f2937; border-radius: 12px; }
+    [data-testid="stMetric"] { background-color: #161e2e; border: 1px solid #1f2937; border-radius: 12px; padding: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. Robust Model Loader (Simplified) ---
+# --- 3. ROBUST MODEL LOADER ---
 @st.cache_resource
 def load_yolo_model():
-    # CRITICAL SECURITY FIX FOR PYTORCH: Allow YOLO detection model to load safely
     import torch
     try:
         if hasattr(torch, 'serialization') and hasattr(torch.serialization, 'add_safe_globals'):
@@ -35,46 +35,41 @@ def load_yolo_model():
     except Exception:
         pass
 
-    # Direct path is best for Streamlit Cloud
-    model_file = "best.pt"
-    if os.path.exists(model_file):
-        try:
-            return YOLO(model_file)
-        except Exception as e:
-            st.error(f"Model error: {e}")
-            return None
-    else:
-        # Check one level deep just in case
-        alt_path = os.path.join(os.getcwd(), "best.pt")
-        if os.path.exists(alt_path):
+    possible_paths = [
+        "best.pt",
+        os.path.join(os.getcwd(), "best.pt"),
+        "/mount/src/saskatoon-cryospheric-road-ml/best.pt"
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
             try:
-                return YOLO(alt_path)
+                return YOLO(path)
             except Exception as e:
-                st.error(f"Model error: {e}")
+                st.error(f"Model error at {path}: {e}")
                 return None
     return None
 
 model = load_yolo_model()
 
-# --- 4. Sidebar Control Center ---
+# --- 4. SIDEBAR CONTROL CENTER ---
 with st.sidebar:
     st.markdown("<h1 style='text-align: center;'>❄️</h1>", unsafe_allow_html=True)
     st.title("Control Center")
     st.metric("City", "Saskatoon, SK", "-14°C")
     st.write("---")
     st.subheader("⚙️ Settings")
-    # Setting default to 0.45 to reduce 'Snow' noise in Foggy images
     conf_val = st.slider("AI Sensitivity", 0.1, 1.0, 0.45)
     st.write("---")
     st.success("Developer: Agha Wafa Abbas")
     st.info("Dataset: DAWN Environment")
 
-# --- 5. Main Interface ---
+# --- 5. MAIN INTERFACE ---
 st.markdown('<div class="header-box"><p class="main-title">SASKATOON ROAD SAFETY AI</p></div>', unsafe_allow_html=True)
 
 if model is None:
     st.error("❌ ERROR: 'best.pt' not detected! Please ensure the file is in your main GitHub folder.")
-    st.info("Tip: Make sure the file is named exactly 'best.pt' (case-sensitive).")
+    st.info("Tip: Make sure the file is named exactly 'best.pt' (case-sensitive) and not hidden inside folders.")
 else:
     uploaded_file = st.file_uploader("📸 Upload Road Snapshot", type=['jpg', 'jpeg', 'png'])
 
@@ -83,36 +78,60 @@ else:
         
         with st.spinner("🧠 AI Engine Analyzing..."):
             results = model.predict(source=img, conf=conf_val)
-            res_plotted = results[0].plot() # Using first result index safely
+            res_plotted = results[0].plot()
             
-            # CRITICAL FIX: Convert YOLO's BGR output array to RGB image format for proper Streamlit display colors
+            # BGR to RGB Color Fix
             display_img = Image.fromarray(res_plotted[..., ::-1])
             
-            # --- Label Filtering Logic ---
-            raw_labels = [model.names[int(box.cls)].lower() for box in results[0].boxes]
+            # --- Evaluation Data Extraction ---
+            boxes = results[0].boxes
+            raw_labels = [model.names[int(box.cls)].lower() for box in boxes]
+            confidences = [float(box.conf) for box in boxes]
             
-            # Clean Labels for Dashboard
+            # Clean Labels Logic
             final_display_labels = set()
-            for label in raw_labels:
+            detailed_data = []
+            
+            for label, conf in zip(raw_labels, confidences):
+                display_name = label.capitalize()
                 if label == 'sand':
+                    display_name = "Low Visibility (Fog/Salt)"
                     final_display_labels.add("Low Visibility (Fog/Salt)")
                 elif label == 'snow':
-                    # Priority: If it's mostly foggy/sand, don't confuse with 'Snow' label
                     if 'sand' not in raw_labels:
                         final_display_labels.add("Snowy Conditions")
+                        display_name = "Snowy Conditions"
                 else:
                     final_display_labels.add(label.capitalize())
+                
+                detailed_data.append({"Object/Hazard": display_name, "Confidence Score": f"{conf:.2f}"})
 
-        # --- 6. Results Layout ---
+        # --- 6. RESULTS LAYOUT ---
         col_vis, col_dash = st.columns([1.6, 1])
 
         with col_vis:
             st.subheader("🔍 Perception View")
             st.image(display_img, use_container_width=True)
+            
+            # Detailed AI Evaluation Table
+            if detailed_data:
+                st.subheader("📊 Detailed AI Evaluation Table")
+                df = pd.DataFrame(detailed_data)
+                st.dataframe(df, use_container_width=True)
 
         with col_dash:
             st.subheader("🛡️ Safety Dashboard")
             
+            # Advanced Live Evaluation Metrics
+            m_col1, m_col2 = st.columns(2)
+            with m_col1:
+                st.metric("Total Hazards", len(boxes))
+            with m_col2:
+                avg_conf = sum(confidences)/len(confidences) if confidences else 0.0
+                st.metric("Avg Conf Score", f"{avg_conf:.2f}")
+
+            st.write("---")
+
             if final_display_labels:
                 st.write("**Detected Risks:**")
                 for label in final_display_labels:
@@ -121,23 +140,51 @@ else:
                 st.error("⚠️ STATUS: HAZARDOUS")
                 with st.expander("📢 Driving Advice", expanded=True):
                     if "Low Visibility (Fog/Salt)" in final_display_labels:
-                        st.write("- **Fog Alert:** Visibility is poor. Use fog lights.")
+                        st.write("- **Fog Alert:** Visibility is poor. Use fog lights and low beams.")
                     if "Snowy Conditions" in final_display_labels:
-                        st.write("- **Snow Alert:** Slippery roads. Reduce speed.")
-                    st.write("- **General:** Maintain distance from other vehicles.")
+                        st.write("- **Snow Alert:** Slippery cryospheric roads. Reduce speed immediately.")
+                    st.write("- **General:** Increase braking distance from other vehicles.")
             else:
                 st.success("✅ STATUS: SAFE")
-                st.write("No critical hazards detected.")
+                st.write("No critical hazards or severe weather threats detected on the road surface.")
 
             st.write("---")
-            report_txt = f"Saskatoon Safety Log\nTime: {datetime.datetime.now()}\nHazards: {', '.join(final_display_labels)}"
+            report_txt = (
+                f"SASKATOON ROAD SAFETY AI REPORT\n"
+                f"================================\n"
+                f"Timestamp: {datetime.datetime.now()}\n"
+                f"Total Detections Evaluated: {len(boxes)}\n"
+                f"Average Model Confidence: {avg_conf:.2f}\n"
+                f"Identified Road Threats: {', '.join(final_display_labels) if final_display_labels else 'None'}\n"
+            )
             st.download_button("📥 Save Analysis Report", report_txt, "Road_Safety_Report.txt")
 
-        # --- 7. Map ---
+        # --- 7. SASKATOON CONTEXT MAP ---
         st.write("---")
+        st.subheader("🗺️ Saskatoon Spatial Node Map")
+        
+        # Determine status colors for map markers
+        map_color = 'red' if final_display_labels else 'green'
+        map_popup = f"Hazards Detected: {', '.join(final_display_labels)}" if final_display_labels else "Road Status: Clear"
+        
         m = folium.Map(location=[52.1332, -106.6700], zoom_start=12, tiles='CartoDB dark_matter')
-        folium.Marker([52.1332, -106.6700], icon=folium.Icon(color='red' if final_display_labels else 'green')).add_to(m)
-        st_folium(m, width="100%", height=300)
+        
+        # Interactive Node Markers in Saskatoon region
+        folium.Marker(
+            [52.1332, -106.6700], 
+            popup=f"<b>Central Node:</b> {map_popup}",
+            tooltip="Downtown / Idlewyld Dr Node",
+            icon=folium.Icon(color=map_color, icon="cloud")
+        ).add_to(m)
+        
+        folium.Marker(
+            [52.1605, -106.6212], 
+            popup="<b>Circle Drive North Node:</b> Monitoring Active",
+            tooltip="Circle Dr East Bridge Node",
+            icon=folium.Icon(color="blue", icon="info-sign")
+        ).add_to(m)
+
+        st_folium(m, width="100%", height=350)
 
 # Footer
 st.markdown(f"<p style='text-align: center; color: #4b5563; font-size: 12px;'>System Node: Active | Developed by Agha Wafa Abbas | {datetime.datetime.now().year}</p>", unsafe_allow_html=True)
