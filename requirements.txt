@@ -1,8 +1,8 @@
-opencv-python-headless
-ultralytics
-streamlit
-pillow
-numpy
-pandas
-folium
-streamlit-folium
+opencv-python-headless==4.10.0.84
+ultralytics==8.2.50
+streamlit==1.36.0
+pillow==10.4.0
+numpy==1.26.4
+pandas==2.2.2
+folium==0.17.0
+streamlit-folium==0.21.0
