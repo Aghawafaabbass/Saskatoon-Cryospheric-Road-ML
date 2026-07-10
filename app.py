@@ -26,6 +26,15 @@ st.markdown("""
 # --- 3. Robust Model Loader (Simplified) ---
 @st.cache_resource
 def load_yolo_model():
+    # CRITICAL SECURITY FIX FOR PYTORCH: Allow YOLO detection model to load safely
+    import torch
+    try:
+        if hasattr(torch, 'serialization') and hasattr(torch.serialization, 'add_safe_globals'):
+            from ultralytics.nn.tasks import DetectionModel
+            torch.serialization.add_safe_globals([DetectionModel])
+    except Exception:
+        pass
+
     # Direct path is best for Streamlit Cloud
     model_file = "best.pt"
     if os.path.exists(model_file):
@@ -38,7 +47,11 @@ def load_yolo_model():
         # Check one level deep just in case
         alt_path = os.path.join(os.getcwd(), "best.pt")
         if os.path.exists(alt_path):
-            return YOLO(alt_path)
+            try:
+                return YOLO(alt_path)
+            except Exception as e:
+                st.error(f"Model error: {e}")
+                return None
     return None
 
 model = load_yolo_model()
