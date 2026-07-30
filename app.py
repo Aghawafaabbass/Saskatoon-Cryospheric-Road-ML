@@ -117,7 +117,7 @@ else:
 
         with col_vis:
             st.subheader("🔍 Perception View")
-            st.image(display_img, channels="BGR", use_container_width=True)
+            st.image(display_img, channels="BGR", use_column_width=True)
 
             # Detailed AI Evaluation Table
             if detailed_data:
