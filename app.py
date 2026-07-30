@@ -24,23 +24,26 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. ROBUST MODEL LOADER ---
+# --- 3. ROBUST MODEL LOADER (FIXED for PyTorch 2.6 weights_only issue) ---
 @st.cache_resource
 def load_yolo_model():
     import torch
-    try:
-        if hasattr(torch, 'serialization') and hasattr(torch.serialization, 'add_safe_globals'):
-            from ultralytics.nn.tasks import DetectionModel
-            torch.serialization.add_safe_globals([DetectionModel])
-    except Exception:
-        pass
+
+    # PyTorch 2.6 changed torch.load default to weights_only=True, which blocks
+    # ultralytics' internal classes (Sequential, DetectionModel, etc.) from loading.
+    # Since this is our own trained checkpoint, it's safe to force weights_only=False.
+    _original_torch_load = torch.load
+    def _patched_torch_load(*args, **kwargs):
+        kwargs['weights_only'] = False
+        return _original_torch_load(*args, **kwargs)
+    torch.load = _patched_torch_load
 
     possible_paths = [
         "best.pt",
         os.path.join(os.getcwd(), "best.pt"),
         "/mount/src/saskatoon-cryospheric-road-ml/best.pt"
     ]
-    
+
     for path in possible_paths:
         if os.path.exists(path):
             try:
@@ -48,6 +51,8 @@ def load_yolo_model():
             except Exception as e:
                 st.error(f"Model error at {path}: {e}")
                 return None
+
+    st.error("❌ 'best.pt' file nahi mila in any of these paths: " + ", ".join(possible_paths))
     return None
 
 model = load_yolo_model()
@@ -75,23 +80,23 @@ else:
 
     if uploaded_file:
         img = Image.open(uploaded_file).convert("RGB")
-        
+
         with st.spinner("🧠 AI Engine Analyzing..."):
             results = model.predict(source=img, conf=conf_val)
             res_plotted = results[0].plot()
-            
+
             # BGR to RGB Color Fix
             display_img = Image.fromarray(res_plotted[..., ::-1])
-            
+
             # --- Evaluation Data Extraction ---
             boxes = results[0].boxes
             raw_labels = [model.names[int(box.cls)].lower() for box in boxes]
             confidences = [float(box.conf) for box in boxes]
-            
+
             # Clean Labels Logic
             final_display_labels = set()
             detailed_data = []
-            
+
             for label, conf in zip(raw_labels, confidences):
                 display_name = label.capitalize()
                 if label == 'sand':
@@ -103,7 +108,7 @@ else:
                         display_name = "Snowy Conditions"
                 else:
                     final_display_labels.add(label.capitalize())
-                
+
                 detailed_data.append({"Object/Hazard": display_name, "Confidence Score": f"{conf:.2f}"})
 
         # --- 6. RESULTS LAYOUT ---
@@ -112,7 +117,7 @@ else:
         with col_vis:
             st.subheader("🔍 Perception View")
             st.image(display_img, use_container_width=True)
-            
+
             # Detailed AI Evaluation Table
             if detailed_data:
                 st.subheader("📊 Detailed AI Evaluation Table")
@@ -121,7 +126,7 @@ else:
 
         with col_dash:
             st.subheader("🛡️ Safety Dashboard")
-            
+
             # Advanced Live Evaluation Metrics
             m_col1, m_col2 = st.columns(2)
             with m_col1:
@@ -136,7 +141,7 @@ else:
                 st.write("**Detected Risks:**")
                 for label in final_display_labels:
                     st.info(f"📍 {label}")
-                
+
                 st.error("⚠️ STATUS: HAZARDOUS")
                 with st.expander("📢 Driving Advice", expanded=True):
                     if "Low Visibility (Fog/Salt)" in final_display_labels:
@@ -162,23 +167,23 @@ else:
         # --- 7. SASKATOON CONTEXT MAP ---
         st.write("---")
         st.subheader("🗺️ Saskatoon Spatial Node Map")
-        
+
         # Determine status colors for map markers
         map_color = 'red' if final_display_labels else 'green'
         map_popup = f"Hazards Detected: {', '.join(final_display_labels)}" if final_display_labels else "Road Status: Clear"
-        
+
         m = folium.Map(location=[52.1332, -106.6700], zoom_start=12, tiles='CartoDB dark_matter')
-        
+
         # Interactive Node Markers in Saskatoon region
         folium.Marker(
-            [52.1332, -106.6700], 
+            [52.1332, -106.6700],
             popup=f"<b>Central Node:</b> {map_popup}",
             tooltip="Downtown / Idlewyld Dr Node",
             icon=folium.Icon(color=map_color, icon="cloud")
         ).add_to(m)
-        
+
         folium.Marker(
-            [52.1605, -106.6212], 
+            [52.1605, -106.6212],
             popup="<b>Circle Drive North Node:</b> Monitoring Active",
             tooltip="Circle Dr East Bridge Node",
             icon=folium.Icon(color="blue", icon="info-sign")
