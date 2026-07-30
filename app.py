@@ -85,8 +85,10 @@ else:
             results = model.predict(source=img, conf=conf_val)
             res_plotted = results[0].plot()
 
-            # BGR to RGB Color Fix
-            display_img = Image.fromarray(res_plotted[..., ::-1])
+            # BGR to RGB Color Fix (ensure uint8 + contiguous array so PIL/Streamlit can encode it safely)
+            import numpy as np
+            rgb_array = np.ascontiguousarray(res_plotted[..., ::-1]).astype(np.uint8)
+            display_img = Image.fromarray(rgb_array)
 
             # --- Evaluation Data Extraction ---
             boxes = results[0].boxes
