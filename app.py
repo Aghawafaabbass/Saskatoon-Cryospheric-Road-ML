@@ -85,10 +85,9 @@ else:
             results = model.predict(source=img, conf=conf_val)
             res_plotted = results[0].plot()
 
-            # BGR to RGB Color Fix (ensure uint8 + contiguous array so PIL/Streamlit can encode it safely)
+            # Keep as a clean uint8 numpy array; let st.image handle BGR->RGB directly (bypasses PIL entirely)
             import numpy as np
-            rgb_array = np.ascontiguousarray(res_plotted[..., ::-1]).astype(np.uint8)
-            display_img = Image.fromarray(rgb_array)
+            display_img = np.ascontiguousarray(res_plotted).astype(np.uint8)
 
             # --- Evaluation Data Extraction ---
             boxes = results[0].boxes
@@ -118,7 +117,7 @@ else:
 
         with col_vis:
             st.subheader("🔍 Perception View")
-            st.image(display_img, use_container_width=True)
+            st.image(display_img, channels="BGR", use_container_width=True)
 
             # Detailed AI Evaluation Table
             if detailed_data:
