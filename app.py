@@ -5,6 +5,8 @@ import os
 import datetime
 import folium
 import pandas as pd
+import numpy as np
+import cv2
 from streamlit_folium import st_folium
 
 # --- 1. PAGE CONFIG ---
@@ -57,6 +59,27 @@ def load_yolo_model():
 
 model = load_yolo_model()
 
+# --- 3B. COLOR-BASED SAND vs SNOW VERIFIER ---
+# The trained model confuses "sand" and "snow" classes since they look visually
+# similar to it in some frames. This checks the actual pixel colors inside each
+# detected box to double-check which one it really is.
+def classify_sand_or_snow(crop_rgb):
+    if crop_rgb is None or crop_rgb.size == 0:
+        return None
+    hsv = cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2HSV)
+    avg_hue = float(hsv[..., 0].mean())
+    avg_sat = float(hsv[..., 1].mean())
+    avg_val = float(hsv[..., 2].mean())
+
+    # Snow: very bright, almost no color saturation (white/grey/light blue)
+    if avg_val > 180 and avg_sat < 40:
+        return "snow"
+    # Sand: warm tan/yellow/brown hue with noticeable saturation
+    if 10 <= avg_hue <= 45 and avg_sat > 40:
+        return "sand"
+    # Fallback tie-breaker: brighter + less saturated leans snow, otherwise sand
+    return "snow" if avg_val >= avg_sat else "sand"
+
 # --- 4. SIDEBAR CONTROL CENTER ---
 with st.sidebar:
     st.markdown("<h1 style='text-align: center;'>❄️</h1>", unsafe_allow_html=True)
@@ -86,7 +109,6 @@ else:
             res_plotted = results[0].plot()
 
             # Keep as a clean uint8 numpy array; let st.image handle BGR->RGB directly (bypasses PIL entirely)
-            import numpy as np
             display_img = np.ascontiguousarray(res_plotted).astype(np.uint8)
 
             # --- Evaluation Data Extraction ---
@@ -94,17 +116,30 @@ else:
             raw_labels = [model.names[int(box.cls)].lower() for box in boxes]
             confidences = [float(box.conf) for box in boxes]
 
+            # --- Color Verification for Sand vs Snow confusion ---
+            img_array = np.array(img)  # original RGB image for pixel-color checks
+            verified_labels = []
+            for box, label in zip(boxes, raw_labels):
+                if label in ('sand', 'snow'):
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                    x1, y1 = max(0, x1), max(0, y1)
+                    crop = img_array[y1:y2, x1:x2]
+                    verified = classify_sand_or_snow(crop)
+                    verified_labels.append(verified if verified else label)
+                else:
+                    verified_labels.append(label)
+
             # Clean Labels Logic
             final_display_labels = set()
             detailed_data = []
 
-            for label, conf in zip(raw_labels, confidences):
+            for label, conf in zip(verified_labels, confidences):
                 display_name = label.capitalize()
                 if label == 'sand':
                     display_name = "Low Visibility (Fog/Salt)"
                     final_display_labels.add("Low Visibility (Fog/Salt)")
                 elif label == 'snow':
-                    if 'sand' not in raw_labels:
+                    if 'sand' not in verified_labels:
                         final_display_labels.add("Snowy Conditions")
                         display_name = "Snowy Conditions"
                 else:
